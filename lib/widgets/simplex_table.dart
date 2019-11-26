@@ -3,20 +3,19 @@ import 'package:flutter/material.dart';
 class SimplexTable extends StatefulWidget {
   final int rows;
   final int columns;
+  final Function onSelectColumn;
 
-  const SimplexTable({
-    Key key,
-    this.rows = 0,
-    this.columns = 0,
-  }) : super(key: key);
+  const SimplexTable(
+      {Key key, this.rows = 0, this.columns = 0, this.onSelectColumn})
+      : super(key: key);
 
   @override
   SimplexTableState createState() => SimplexTableState();
 }
 
 class SimplexTableState extends State<SimplexTable> {
-  Map<String, String> values = {};
-  int columnSelected = 0;
+  Map<String, String> _values = {};
+  int _columnSelected = 0;
 
   @override
   void didUpdateWidget(SimplexTable oldWidget) {
@@ -29,12 +28,26 @@ class SimplexTableState extends State<SimplexTable> {
     Map<String, String> newValues = {};
     for (var i = 0; i < widget.rows; i++) {
       for (var j = 0; j < widget.columns; j++) {
-        newValues['$i$j'] = values['$i$j'] ?? '0';
+        newValues['$i$j'] = _values['$i$j'] ?? '0';
       }
     }
     setState(() {
-      values = newValues;
+      _values = newValues;
     });
+  }
+
+  void setValues(Map<String, String> newValues) {
+    setState(() {
+      _values = newValues;
+    });
+  }
+
+  int get selectedColumn {
+    return _columnSelected;
+  }
+
+  Map<String, String> get values {
+    return _values;
   }
 
   Future _showDialog(int row, int column) {
@@ -78,7 +91,7 @@ class SimplexTableState extends State<SimplexTable> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        sortColumnIndex: columnSelected,
+        sortColumnIndex: _columnSelected,
         columns: List.generate(
           widget.columns,
           (index) => DataColumn(
@@ -90,7 +103,10 @@ class SimplexTableState extends State<SimplexTable> {
                   .copyWith(fontWeight: FontWeight.bold),
             ),
             numeric: true,
-            onSort: (index, _) => setState(() => columnSelected = index),
+            onSort: (index, _) => setState(() {
+              _columnSelected = index;
+              widget.onSelectColumn();
+            }),
           ),
         ),
         rows: List.generate(
@@ -99,11 +115,11 @@ class SimplexTableState extends State<SimplexTable> {
             cells: List.generate(
               widget.columns,
               (column) => DataCell(
-                Text(values['$row$column'] ?? '0'),
+                Text(_values['$row$column'] ?? '0'),
                 onTap: () => _showDialog(row, column).then(
                   (result) => setState(
-                    () =>
-                        values['$row$column'] = result ?? values['$row$column'],
+                    () => _values['$row$column'] =
+                        result ?? _values['$row$column'],
                   ),
                 ),
               ),
