@@ -33,35 +33,39 @@ class _HomePageState extends State<HomePage> {
     print(
       currentValues['$row$column'],
     );
-    ContextModel cm = ContextModel();
+
     Parser p = Parser();
 
-    Map<String, double> actualValues = {};
-    Expression exp = p.parse(currentValues['$row$column']);
-    final value = exp.evaluate(EvaluationType.REAL, cm);
+    Map<String, Expression> actualValues = {};
+    Expression value = p.parse(currentValues['$row$column']);
     for (var j = 0; j < _columns; j++) {
       Expression exp = p.parse(currentValues['$row$j']);
-      final currentValue = exp.evaluate(EvaluationType.REAL, cm);
-      actualValues['$row$j'] = currentValue / value;
+      final currentValue = exp.simplify();
+      actualValues['$row$j'] = p.parse('$currentValue') / value;
     }
 
     for (var i = 0; i < _rows; i++) {
       if (i == row) continue;
-      Expression exp = p.parse(currentValues['$i$column']);
-      final pivot = -1 * exp.evaluate(EvaluationType.REAL, cm);
+      final pivot = p.parse('-1 * ${currentValues['$i$column']}');
 
       for (var j = 0; j < _columns; j++) {
         Expression exp = p.parse(currentValues['$i$j']);
-        final currentValue = exp.evaluate(EvaluationType.REAL, cm);
-        actualValues['$i$j'] = currentValue + pivot * actualValues['$row$j'];
+        actualValues['$i$j'] = exp + pivot * actualValues['$row$j'];
       }
     }
 
     Map<String, String> newValues = {};
 
+    ContextModel cm = ContextModel();
+
     for (var i = 0; i < _rows; i++) {
       for (var j = 0; j < _columns; j++) {
-        newValues['$i$j'] = actualValues['$i$j'].toString();
+        try {
+          newValues['$i$j'] =
+              actualValues['$i$j'].evaluate(EvaluationType.REAL, cm).toString();
+        } catch (e) {
+          newValues['$i$j'] = actualValues['$i$j'].simplify().toString();
+        }
       }
     }
 
@@ -73,6 +77,14 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Simplex'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.ac_unit),
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
